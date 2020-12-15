@@ -1,21 +1,24 @@
-import cv2 as cv
-import skimage.io as io
-import matplotlib.pyplot as plt
 import numpy as np
-from skimage.exposure import histogram
+import math
+import cv2 as cv
+from scipy.signal import convolve2d
+from scipy import fftpack
+import matplotlib.pyplot as plt
+from matplotlib import cm
 from matplotlib.pyplot import bar
+
+import skimage.io as io
+from skimage.exposure import histogram
 from skimage.color import rgb2gray, rgb2hsv, label2rgb
 from skimage import data, img_as_float
 from skimage.feature import *
+from skimage.transform import *
+from skimage.filters import *
+from skimage.util import random_noise
+from skimage.measure import label
+
 
 # Convolution:
-from scipy.signal import convolve2d
-from scipy import fftpack
-import math
-
-from skimage.util import random_noise
-from skimage.filters import median, sobel_h, sobel, sobel_v, roberts, prewitt
-from skimage.measure import label
 
 
 def show_images(images, titles=None):
