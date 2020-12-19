@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import cv2 as cv
+import scipy as sp
 from scipy.signal import convolve2d
 from scipy import fftpack
 import matplotlib.pyplot as plt
@@ -8,7 +9,7 @@ from matplotlib import cm
 from matplotlib.pyplot import bar
 
 import skimage.io as io
-from skimage.exposure import histogram
+from skimage.exposure import *
 from skimage.color import rgb2gray, rgb2hsv, label2rgb
 from skimage import data, img_as_float
 from skimage.feature import *
@@ -17,6 +18,7 @@ from skimage.filters import *
 from skimage.util import random_noise
 from skimage.measure import label
 from skimage.morphology import *
+from skimage.draw import *
 
 # Convolution:
 
