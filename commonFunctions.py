@@ -16,7 +16,7 @@ from skimage.feature import *
 from skimage.transform import *
 from skimage.filters import *
 from skimage.util import random_noise
-from skimage.measure import label
+from skimage.measure import *
 from skimage.morphology import *
 from skimage.draw import *
 
