@@ -1,0 +1,7 @@
+OpenCV: 
+
+conda install -c conda-forge opencv
+conda install scikit-learn
+conda install -c conda-forge imutils
+
+Check online for instructions if your operating system didn't accept the previous command(s). 
