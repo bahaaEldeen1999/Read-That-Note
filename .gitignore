@@ -1,7 +1,10 @@
 __pycache__
 .ipynb_checkpoints
+.vscode
+
 preproccessing/__pycache__
 preproccessing/.ipynb_checkpoints
-.vscode
 preproccessing/__pycache__/commonfunctions.cpython-38.pyc
 preproccessing/.ipynb_checkpoints/Untitled-checkpoint.ipynb
+
+# dataset
