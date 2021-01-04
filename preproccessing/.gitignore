@@ -14,3 +14,5 @@ test_new
 output
 outputE
 outputH
+.ipynb_checkpoints
+__pycache__
