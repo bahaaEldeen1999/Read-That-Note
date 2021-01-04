@@ -3,7 +3,9 @@ import skimage as sk
 import numpy as np
 import matplotlib as mp
 import scipy as sp
-import heapq
+from heapq import *
+import cv2 as cv
+import os
 
 
 def binarize(img, block_size=35):
@@ -26,6 +28,7 @@ def runs_of_ones_array(bits):
 def verticalRunLength(img):
     # white runs
     arr = []
+    cdef int i
     for i in range(0, img.shape[1]):
         a = runs_of_ones_array(img[:, i])
         for x in a:
@@ -58,7 +61,7 @@ def calcWeightFunc(p, q, c1, c2):
 def constructGraph(img):
     di = [0, 0, 1, -1, 1, -1, 1, -1]
     dj = [1, -1, 0, 0, 1, -1, -1, 1]
-    #graph = []
+    # graph = []
     n = img.shape[0]*img.shape[1]
     graph = {}
     cdef int ni
@@ -74,7 +77,7 @@ def constructGraph(img):
             for k in range(8):
                 ni = i + di[k]
                 nj = j + dj[k]
-                #print("k "+str(k))
+                # print("k "+str(k))
                 if ni >= 0 and ni < img.shape[0] and nj >= 0 and nj < img.shape[1]:
                     w = calcWeightFunc(img[i][j], img[ni][nj], 6, 12)
                     indx2 = ni*img.shape[1]+nj
@@ -103,22 +106,39 @@ def dijkstra(img, graph, r, p1, p2):
     cdef int n = len(graph)  # 2*img.shape[0]*img.shape[1]
     cdef INF = 100000000
     cdef int i
-    for i in range(n):
-        dis.append(INF)
-        p.append(-1)
-    dis[indxStart] = 0
+    cdef int w
+    cdef int edge_len
+    # for i in range(n):
+    #     dis.append(INF)
+    #     p.append(-1)
+    # dis[indxStart] = 0
+    # p[indxStart] = indxStart
+    # priority_q = []
+    # finished = set()
+    # relaxEdges(indxStart, 0, dis, priority_q)
+    # cdef int indx = 0
+    # while len(priority_q) and len(finished) != n:
+    #     _, u = heapq.heappop(priority_q)
+    #     finished.add(u)
+    #     for edge in graph[u]:
+    #         if edge['node']-p1 >= 0 and edge['node']-p1 < n and dis[edge['node']-p1] > dis[u]+edge['w']:
+    #             relaxEdges(edge['node']-p1, dis[u]+edge['w'], dis, priority_q)
+    #             p[edge['node']-p1] = u
+    # print("N "+str(n))
+    A = [None]*n
+    p = [-1]*n
     p[indxStart] = indxStart
-    priority_q = []
-    finished = set()
-    relaxEdges(indxStart, 0, dis, priority_q)
-    cdef int indx = 0
-    while len(priority_q) and len(finished) != n:
-        _, u = heapq.heappop(priority_q)
-        finished.add(u)
-        for edge in graph[u]:
-            if edge['node']-p1 >= 0 and edge['node']-p1 < n and dis[edge['node']-p1] > dis[u]+edge['w']:
-                relaxEdges(edge['node']-p1, dis[u]+edge['w'], dis, priority_q)
-                p[edge['node']-p1] = u
+    queue = [(0, indxStart)]
+    while queue:
+        path_len, v = heappop(queue)
+        if A[v] is None:  # v is unvisited
+            A[v] = path_len
+            for edge in graph[v]:
+                w = edge['node']-p1
+                edge_len = edge['w']
+                if w >= 0 and w < n and A[w] is None:
+                    heappush(queue, (path_len + edge_len, w))
+                    p[w] = v
     return p
 
 
@@ -198,9 +218,11 @@ def trimPath(img, path, white_run, p1):
 
 
 def staffLineDetection(img, staff_space, staff_height):
-    cdef float white_perc = 0.75
+    cdef float white_perc = 0.5
     graph = constructGraph(img)
     newImg = np.copy(img)
+    newImg2 = np.zeros(img.shape)
+    staff_lines = []
     cdef int strip_height = 2 * staff_space
     print("strip hegiht "+str(strip_height))
     cdef int i
@@ -210,19 +232,19 @@ def staffLineDetection(img, staff_space, staff_height):
     cdef int j
     cdef int x
     for i in range(img.shape[0]):
-        #print("row "+str(i))
+        # print("row "+str(i))
         p1 = max(0, i-strip_height)
-        #p1 = 0
+        # p1 = 0
         p2 = min(img.shape[0]-1, i+strip_height)
-        #print("P1 "+str(p1)+" P2 "+str(p2))
+        # print("P1 "+str(p1)+" P2 "+str(p2))
         # p2 = 1
-        #print(p1*img.shape[1], (p2+1) * img.shape[1])
+        # print(p1*img.shape[1], (p2+1) * img.shape[1])
         p = dijkstra(img, graph[p1*img.shape[1]:(p2+1)
                                 * img.shape[1]], i, p1*img.shape[1], p2)
         # print(p)
-        #print("finished dijksra")
+        # print("finished dijksra")
         path = getPath(img, p, i, p1*img.shape[1])
-        #print("finished get path")
+        # print("finished get path")
         if getWhitePercent(img, path, p1*img.shape[1]) < white_perc:
             continue
         # staffLines.append(path)
@@ -234,66 +256,164 @@ def staffLineDetection(img, staff_space, staff_height):
             c = u % img.shape[1]
             r = min(img.shape[0]-1, r)
             c = min(img.shape[1]-1, c)
-            r1 = r-staff_height-2
-            r2 = r+staff_height+2
-            d = True
-            if (r1 >= 0 and img[r1][c] == True) or (r2 < img.shape[0] and img[r2][c] == True):
-                d = False
-            if not d:
-                continue
+            # r1 = r-staff_height//2-1
+            # r2 = r+staff_height//2+1
+            # d = True
+            # if (r1 >= 0 and img[r1][c] == True) or (r2 < img.shape[0] and img[r2][c] == True):
+            #     d = False
+            # if not d:
+            #     continue
             for j in range(max(0, r-staff_height), min(img.shape[0], r+staff_height)):
                 newImg[j][c] = False
-        print("white line ")
-    return newImg
+                # newImg2[j][c] = True
+        staff_lines.append(i)
+        # print("white line ")
+    # show_images([newImg2])
+    return newImg, staff_lines
 
 
-def deskewImg(img):
-    imgCanny = sk.feature.canny(img, sigma=.9)
-    imgCanny = binarize(img)
+def deskew(original_img):
+    img = np.copy((original_img))
+    # Canny
+    imgCanny = sk.feature.canny(img, sigma=1.5)
+    thresh = sk.filters.threshold_otsu(imgCanny)
+    imgCanny = (imgCanny >= thresh)
+
+    # Apply Hough Transform
     # Generates a list of 360 Radian degrees (-pi/2, pi/2)
     angleSet = np.linspace(-np.pi, np.pi, 1440)
     houghArr, theta, dis = sk.transform.hough_line(imgCanny, angleSet)
+
     flatIdx = np.argmax(houghArr)
     bestTheta = (flatIdx % theta.shape[0])
     bestTheta = angleSet[bestTheta]
     bestDis = np.int32(np.floor(flatIdx / theta.shape[0]))
     bestDis = dis[bestDis]
-    bestLine = np.zeros(imgCanny.shape)
-    if bestTheta == 0:
-        for y in range(imgCanny.shape[0]):
-            bestLine[y, bestDis] = 1
-    else:
-        for x in range(bestLine.shape[1]):
-            y = (bestDis - x*np.cos(bestTheta))/np.sin(bestTheta)
-            y = np.int32(np.floor(y))
-            if y < bestLine.shape[0] and y >= 0:
-                bestLine[y, x] = 1
-            else:
-                pass
-    lineAboveImgCanny = np.maximum(imgCanny, bestLine)
+
+    # Rotate
     thetaRotateDeg = (bestTheta*180)/np.pi
     if thetaRotateDeg > 0:
         thetaRotateDeg = thetaRotateDeg - 90
     else:
         thetaRotateDeg = thetaRotateDeg + 90
-    imgRotated = sk.transform.rotate(img, thetaRotateDeg)
-    imgRotated = imgRotated > 0
+
+    imgRotated = rgb2gray(sk.transform.rotate(
+        img, thetaRotateDeg, resize=True))
     return imgRotated
 
 
-def runCode():
-    img = sk.io.imread('imgs/test8.jpg', as_gray=True)
-    img = sk.transform.resize(img, (400, 400))
-    img = img.astype(np.float64) / np.max(img)
-    img = 255 * img
-    img = img.astype(np.uint8)
-    img = binarize(img)
-    img = deskewImg(img)
+def lineSegmentation(img, staff_lines):
+    blocks = np.zeros(img.shape)
+    for x in staff_lines:
+        blocks[max(0, x-5):min(img.shape[0]-1, x+5), :] = True
+    newImgs = []
+    cdef int i
+    cdef int j
+    i = 0
+    j = 0
+    while i < blocks.shape[0]:
+        if blocks[i][0] == True:
+            j = i+1
+            while j < blocks.shape[0] and blocks[j][0] == True:
+                j += 1
+            print("i "+str(i)+" j "+str(j))
+            newImgs.append(img[i:j, :])
+            i = j - 1
+        i += 1
+
+    return newImgs
+
+
+def charachterSegmentation(img, staff_height):
+    # img = sk.transform.resize(
+    #     img, output_shape=(img.shape[0]*2, img.shape[1]*4), mode="constant", cval=0)
+    # img = img > 0
+    # print(img.shape)
     # show_images([img])
-    staff_height, staff_space = verticalRunLength(img)
-    cdef int T_LEN = min(2*staff_height, staff_height+staff_space)
-    print(img.shape)
-    removed_staff = staffLineDetection(img, staff_space, staff_height)
-    show_images([removed_staff])
-    horizontal_hist = np.sum(img, axis=1, keepdims=True)
-    print(horizontal_hist)
+    se = np.ones((1, 4))
+    # img_n = sk.morphology.erosion(img, se)
+    # img_n = img_n ^ img
+    # show_images([img_n])
+    vertical_hist = np.sum(img, axis=0, keepdims=True)
+    # print(vertical_hist)
+    chars = []
+    i = 0
+    while i < img.shape[1]:
+        if vertical_hist[0][i] > staff_height:
+            j = i + 1
+            while j < img.shape[1] and vertical_hist[0][j] > staff_height:
+                j += 1
+            # print("i "+str(i)+" j "+str(j))
+            chars.append(img[:, i:j])
+            i = j - 1
+        i += 1
+    return chars
+
+
+def removeMusicalNotes(img, T_LEN):
+    newImg = np.zeros(img.shape)
+    cdef int k = 0
+    cdef int i = 0
+    cdef int j = 0
+    for i in range(0, img.shape[1]):
+        arr = runs_of_ones_array(img[:, i])
+        # print(arr)
+        k = 0
+        j = 0
+        while j < img.shape[0]:
+            if img[j][i] == True:
+                if arr[k] > T_LEN:
+                    for x in range(0, arr[k]):
+                        newImg[j][i] = True
+                        j += 1
+                else:
+                    j += arr[k]-1
+                k += 1
+            j += 1
+    return newImg
+
+
+def extractCircleNotes(img, staff_height):
+    newImg = np.zeros(img.shape)
+    se = np.ones((staff_height*2-1, staff_height*2-1))
+    newImg = sk.morphology.erosion(newImg, se)
+    return newImg
+
+
+def runCode():
+    cdef int T_LEN
+    folder = 'hard'
+    for filename in os.listdir(folder):
+        img = sk.io.imread(os.path.join(folder, filename), as_gray=True)
+        #img = sk.transform.resize(img, (200, 200))
+        # show_images([img])
+        # img = sk.transform.resize(img, (500, 600))
+        img = deskew(img)
+        img = img.astype(np.float64) / np.max(img)
+        img = 255 * img
+        img = img.astype(np.uint8)
+        img = binarize(img)
+        img = sk.morphology.closing(img)
+        staff_height, staff_space = verticalRunLength(img)
+        T_LEN = min(2*staff_height, staff_height+staff_space)
+        print(img.shape)
+        img_1 = extractCircleNotes(img, staff_height)
+        show_images([img_1])
+        # removed_staff, staff_lines = staffLineDetection(img, staff_space, staff_height)
+        # show_images([removed_staff])
+        removed_staff = removeMusicalNotes(img, T_LEN)
+
+        # show_images([removed_staff])
+        # io.imsave("outputE/"+filename+"_removed_stadd.png",
+        # sk.img_as_uint(removed_staff))
+        se = np.ones((staff_height+1, staff_height+1))
+        removed_staff = sk.morphology.closing(removed_staff, se)
+        io.imsave(folder+"Out/"+filename+"_removed_stadd_closing.png",
+                  sk.img_as_uint(removed_staff))
+        # show_images([removed_staff])
+        # staffs = lineSegmentation(removed_staff, staff_lines)
+        # show_images(staffs)
+        # chars = charachterSegmentation(staffs[0], 0)
+        print("done "+filename)
+        # io.imsave("output/test7_removed_stadd_closing.png",removed_staff)
+        # show_images(chars)

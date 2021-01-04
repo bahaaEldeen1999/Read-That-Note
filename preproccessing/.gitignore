@@ -6,3 +6,11 @@ __pycache__
 *.txt
 build
 PublicTestCases
+easy
+hard
+hardOut
+easyOut
+test_new
+output
+outputE
+outputH

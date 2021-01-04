@@ -46,7 +46,7 @@ def line_detection(img):
         Ymin -= 2
         Ymax += 2
         ar = (Xmax-Xmin)/(Ymax-Ymin)
-        if ((ar > 5)):
+        if ((ar > 1)):
             rr, cc = sk.draw.rectangle(
                 start=(Ymin, Xmin), end=(Ymax, Xmax), shape=newImg.shape)
             rr = rr.astype(int)
@@ -57,10 +57,10 @@ def line_detection(img):
             # lines.append(int(Ymax))
             # print("sdsd")
     # show_images([newImg])
-    #se = np.ones((1, 21))
+    se = np.ones((1, 21))
+    newImg = sk.morphology.dilation(newImg, se)
     #newImg = sk.morphology.dilation(newImg, se)
-    #newImg = sk.morphology.dilation(newImg, se)
-    #newImg = sk.morphology.closing(newImg)
+    newImg = sk.morphology.closing(newImg)
     # newImg = sk.morphology.closing(newImg)
     # newImg = sk.morphology.closing(newImg)
     bounding_boxes = sk.measure.find_contours(newImg, .1)
@@ -72,7 +72,7 @@ def line_detection(img):
         Ymin -= 2
         Ymax += 2
         ar = (Xmax-Xmin)/(Ymax-Ymin)
-        if ((ar > 5)):
+        if ((ar > 1)):
             rr, cc = sk.draw.rectangle(
                 start=(Ymin, Xmin), end=(Ymax, Xmax), shape=newImg.shape)
             rr = rr.astype(int)
@@ -445,14 +445,36 @@ def deskewImg(img):
 #show_images([img, staffLineDetection(img, staff_space, staff_height)])
 # show_images([img])
 
-img = sk.io.imread('imgs/test10.jpg', as_gray=True)
+img = sk.io.imread('imgs/test11.png', as_gray=True)
 img = sk.transform.resize(img, (400, 400))
 show_images([img])
 img = img.astype(np.float64) / np.max(img)
 img = 255 * img
 img = img.astype(np.uint8)
 img = binarize(img)
-img = deskewImg(img)
-#img = img > 0
+#img = deskewImg(img)
 show_images([img])
+lines = line_detection(img)
+newImgs = []
+i = 0
+while True:
+    # print(i)
+    r0 = lines[i]
+    r1 = lines[i+1]
+    r0 = int(r0)
+    r1 = int(r1)
+
+    i += 2
+
+    if r1-r0 < 6 or r1 < 0 or r0 < 0:
+        if i >= len(lines):
+            break
+        continue
+    newImg = np.array(((r1-r0), img.shape[1]))
+    newImg = img[r0-2:r1+2, :]
+    newImgs.append(newImg)
+    if i >= len(lines):
+        break
+# show_images([img])
+show_images(newImgs)
 staff_height, staff_space = verticalRunLength(img)
