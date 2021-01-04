@@ -297,12 +297,12 @@ def deskew(original_img):
     else:
         thetaRotateDeg = thetaRotateDeg + 90
 
-    imgRotated = rgb2gray(sk.transform.rotate(
-        img, thetaRotateDeg, resize=True))
+    imgRotated = (sk.transform.rotate(
+        img, thetaRotateDeg, resize=True, mode='constant', cval=1))
     return imgRotated
 
 
-def lineSegmentation(img, staff_lines):
+def lineSegmentationBasedOnStaves(img, staff_lines):
     blocks = np.zeros(img.shape)
     for x in staff_lines:
         blocks[max(0, x-5):min(img.shape[0]-1, x+5), :] = True
@@ -324,13 +324,13 @@ def lineSegmentation(img, staff_lines):
     return newImgs
 
 
-def charachterSegmentation(img, staff_height):
+def charachterSegmentation(img, t):
     # img = sk.transform.resize(
     #     img, output_shape=(img.shape[0]*2, img.shape[1]*4), mode="constant", cval=0)
     # img = img > 0
     # print(img.shape)
     # show_images([img])
-    se = np.ones((1, 4))
+    #se = np.ones((1, 4))
     # img_n = sk.morphology.erosion(img, se)
     # img_n = img_n ^ img
     # show_images([img_n])
@@ -339,9 +339,9 @@ def charachterSegmentation(img, staff_height):
     chars = []
     i = 0
     while i < img.shape[1]:
-        if vertical_hist[0][i] > staff_height:
+        if vertical_hist[0][i] > t:
             j = i + 1
-            while j < img.shape[1] and vertical_hist[0][j] > staff_height:
+            while j < img.shape[1] and vertical_hist[0][j] > t or abs(i-j) < 10:
                 j += 1
             # print("i "+str(i)+" j "+str(j))
             chars.append(img[:, i:j])
@@ -374,45 +374,80 @@ def removeMusicalNotes(img, T_LEN):
 
 
 def extractCircleNotes(img, staff_height):
-    newImg = np.zeros(img.shape)
-    se = np.ones((staff_height*2-1, staff_height*2-1))
-    newImg = sk.morphology.erosion(newImg, se)
+    newImg = np.copy(img)
+    se = np.ones((staff_height+1, staff_height+1))
+    newImg = sk.morphology.binary_erosion(newImg, se)
     return newImg
+
+
+def classicLineSegmentation(img_bin, staff_space=0):
+    org = np.copy(img_bin)
+    lines = []
+    se = np.ones((staff_space+5, 2))
+    img_bin = sk.morphology.binary_dilation(img_bin, se)
+    se = np.ones((staff_space*4, 2))
+    img_bin2 = sk.morphology.binary_erosion(img_bin, se)
+
+    img = img_bin2.astype(np.uint8)
+    img *= 255
+    #show_images([img_bin, img_bin2])
+    contours, hierarchy = cv.findContours(
+        img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    for cnt in contours:
+        x, y, w, h = cv.boundingRect(cnt)
+        if w/h >= 3:
+            lines.append([y, y+h, x, x+w])
+            show_images([img[y: y+h, x: x+w]])
+    return lines
 
 
 def runCode():
     cdef int T_LEN
-    folder = 'hard'
+    folder = 'test_new'
     for filename in os.listdir(folder):
+        print("file "+str(filename))
         img = sk.io.imread(os.path.join(folder, filename), as_gray=True)
-        #img = sk.transform.resize(img, (200, 200))
+        # img = sk.transform.resize(img, (200, 200))
         # show_images([img])
         # img = sk.transform.resize(img, (500, 600))
         img = deskew(img)
+        # show_images([img])
         img = img.astype(np.float64) / np.max(img)
         img = 255 * img
         img = img.astype(np.uint8)
         img = binarize(img)
-        img = sk.morphology.closing(img)
+        img = sk.morphology.binary_closing(img)
         staff_height, staff_space = verticalRunLength(img)
         T_LEN = min(2*staff_height, staff_height+staff_space)
+
+        #####
+        lines = classicLineSegmentation(img, staff_space)
+        ######
         print(img.shape)
         img_1 = extractCircleNotes(img, staff_height)
-        show_images([img_1])
+        img_1 = img_1 > 0
+        # show_images([img_1])
         # removed_staff, staff_lines = staffLineDetection(img, staff_space, staff_height)
         # show_images([removed_staff])
         removed_staff = removeMusicalNotes(img, T_LEN)
-
+        removed_staff = removed_staff > 0
+        removed_staff = removed_staff | img_1
         # show_images([removed_staff])
         # io.imsave("outputE/"+filename+"_removed_stadd.png",
         # sk.img_as_uint(removed_staff))
         se = np.ones((staff_height+1, staff_height+1))
-        removed_staff = sk.morphology.closing(removed_staff, se)
-        io.imsave(folder+"Out/"+filename+"_removed_stadd_closing.png",
-                  sk.img_as_uint(removed_staff))
+        removed_staff = sk.morphology.binary_closing(removed_staff, se)
+        removed_staff = sk.morphology.binary_dilation(removed_staff)
+        for line in lines:
+            try:
+                show_images(charachterSegmentation(
+                    removed_staff[line[0]:line[1], line[2]:line[3]], 0))
+            except:
+                continue
+        # io.imsave(folder+"Out/"+filename+"_removed_stadd_closing.png",sk.img_as_uint(removed_staff))
         # show_images([removed_staff])
         # staffs = lineSegmentation(removed_staff, staff_lines)
-        # show_images(staffs)
+
         # chars = charachterSegmentation(staffs[0], 0)
         print("done "+filename)
         # io.imsave("output/test7_removed_stadd_closing.png",removed_staff)
