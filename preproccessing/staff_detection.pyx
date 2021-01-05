@@ -356,7 +356,7 @@ def charachterSegmentation(img_o, t):
     return chars
 
 
-def removeMusicalNotes(img, T_LEN):
+def extractMusicalNotes(img, T_LEN):
     newImg = np.zeros(img.shape)
     cdef int k = 0
     cdef int i = 0
@@ -371,6 +371,29 @@ def removeMusicalNotes(img, T_LEN):
                 if arr[k] > T_LEN:
                     for x in range(0, arr[k]):
                         newImg[j][i] = True
+                        j += 1
+                else:
+                    j += arr[k]-1
+                k += 1
+            j += 1
+    return newImg
+
+
+def extractStaffLines(img, T_LEN):
+    newImg = np.copy(img)
+    cdef int k = 0
+    cdef int i = 0
+    cdef int j = 0
+    for i in range(0, img.shape[1]):
+        arr = runs_of_ones_array(img[:, i])
+        # print(arr)
+        k = 0
+        j = 0
+        while j < img.shape[0]:
+            if img[j][i] == True:
+                if arr[k] > T_LEN:
+                    for x in range(0, arr[k]):
+                        newImg[j][i] = False
                         j += 1
                 else:
                     j += arr[k]-1
@@ -414,9 +437,59 @@ def classicLineSegmentation(img, staff_space=0):
     return lines
 
 
+def estimateStaffLines(img, staff_height):
+    newImg = np.copy(img)
+    # newImg = sk.morphology.skeletonize(img)
+    # se = np.ones((1, 15))
+    # newImg = sk.morphology.binary_closing(newImg, se)
+    # show_images([newImg])
+    # detect lines
+    tested_angles = np.linspace(-np.pi / 2, np.pi / 2, 360)
+    h, theta, d = sk.transform.hough_line(newImg, theta=tested_angles)
+
+    # Generating figure 1
+    fig, axes = plt.subplots(1, 3, figsize=(15, 6))
+    ax = axes.ravel()
+
+    ax[0].imshow(newImg, cmap=cm.gray)
+    ax[0].set_title('Input image')
+    ax[0].set_axis_off()
+
+    ax[1].imshow(np.log(1 + h),
+                 extent=[np.rad2deg(theta[-1]),
+                         np.rad2deg(theta[0]), d[-1], d[0]],
+                 cmap=cm.gray, aspect=1/1.5)
+    ax[1].set_title('Hough transform')
+    ax[1].set_xlabel('Angles (degrees)')
+    ax[1].set_ylabel('Distance (pixels)')
+    ax[1].axis('image')
+
+    ax[2].imshow(newImg, cmap=cm.gray)
+    origin = np.array((0, newImg.shape[1]))
+    cdef int lines = 0
+    cdef float maxDis = -1000000
+    y0 = -1
+    y1 = -1
+    for _, angle, dist in zip(*sk.transform.hough_line_peaks(h, theta, d)):
+        # print(dist)
+        if dist > maxDis:
+            y0, y1 = (dist - origin * np.cos(angle)) / np.sin(angle)
+            maxDis = dist
+        lines += 1
+    ax[2].plot(origin, (y0, y1), '-r')
+    ax[2].set_xlim(origin)
+    ax[2].set_ylim((newImg.shape[0], 0))
+    ax[2].set_axis_off()
+    ax[2].set_title('Detected First Line')
+
+    plt.tight_layout()
+    plt.show()
+    print("-------------\ndetected lines "+str(lines)+"\n----------------")
+
+
 def runCode():
     cdef int T_LEN
-    folder = 'easy'
+    folder = 'hard'
     try:
         os.mkdir(folder + "Out")
     except:
@@ -439,6 +512,12 @@ def runCode():
         staff_height, staff_space = verticalRunLength(img)
         T_LEN = min(2*staff_height, staff_height+staff_space)
         ########
+        staffLines = extractStaffLines(img, T_LEN)
+
+        # show_images([staffLines])
+
+        ########
+        ########
         img_1 = extractCircleNotes(img, staff_height)
         img_1 = img_1 > 0
         # show_images([img_1])
@@ -449,7 +528,7 @@ def runCode():
         print(img.shape)
         # removed_staff, staff_lines = staffLineDetection(img, staff_space, staff_height)
         # show_images([removed_staff])
-        removed_staff = removeMusicalNotes(img, T_LEN)
+        removed_staff = extractMusicalNotes(img, T_LEN)
         removed_staff = removed_staff > 0
         removed_staff = removed_staff | img_1
         # show_images([removed_staff])
@@ -469,13 +548,16 @@ def runCode():
             pass
         for line in lines:
             try:
+                estimateStaffLines(
+                    staffLines[line[0]:line[1], line[2]:line[3]], staff_height)
+                continue
                 i += 1
                 chars = charachterSegmentation(
                     removed_staff[line[0]:line[1], line[2]:line[3]], 0*staff_height*2)
                 try:
                     os.mkdir(folder + "Out/"+filename +
                              "_img/"+filename+"_lines"+str(i))
-                except:
+                except Exception as e:
                     pass
                 j = 0
                 for char in chars:
@@ -485,7 +567,8 @@ def runCode():
                     io.imsave(folder + "Out/"+filename+"_img/"+filename+"_lines"+str(i)+"/"+filename+"_line_"+str(i) + "_char_"+str(
                         j)+".png", sk.img_as_uint(removed_staff[line[0]:line[1], line[2]:line[3]][char[0]:char[1], char[2]:char[3]]))
                     j += 1
-            except:
+            except Exception as e:
+                print(e)
                 continue
         # io.imsave(folder+"Out/"+filename+"_removed_stadd_closing.png",sk.img_as_uint(removed_staff))
         # show_images([removed_staff])
