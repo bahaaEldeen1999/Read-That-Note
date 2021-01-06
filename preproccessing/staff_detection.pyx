@@ -402,12 +402,12 @@ def extractStaffLines(img, T_LEN):
     return newImg
 
 
-def extractCircleNotes(img, staff_height):
+def extractCircleNotes(img, staff_space):
     # print(staff_height)
     newImg = np.copy(img)
     # se = np.ones(((staff_height)*2, (staff_height)*2))
     # newImg = sk.morphology.binary_dilation(newImg, se)
-    se = np.ones(((staff_height+1)*2, (staff_height+1)*2))
+    se = np.ones(((staff_space), (staff_space)))
     newImg = sk.morphology.binary_opening(newImg, se)
     # newImg = sk.morphology.binary_erosion(newImg, se)
     return newImg
@@ -487,9 +487,82 @@ def estimateStaffLines(img, staff_height):
     print("-------------\ndetected lines "+str(lines)+"\n----------------")
 
 
+def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, img_o=None):
+    img = np.copy(note)
+    s_c = np.copy(staff_lines)
+    n_c = np.copy(note)
+    s_c = s_c > 0
+    n_c = n_c > 0
+    s_c[charPos[0]:charPos[1], charPos[2]:charPos[3]
+        ] = s_c[charPos[0]:charPos[1], charPos[2]:charPos[3]] | n_c
+    err = staff_space//8
+    se = np.ones((staff_space-err, staff_space-err))
+    img = sk.morphology.binary_opening(img, se)
+    # show_images([staff_lines, img, note])
+    bounding_boxes = sk.measure.find_contours(img, 0.8)
+    # newImg = np.zeros(img.shape)
+    print(len(bounding_boxes))
+    for box in bounding_boxes:
+        # print(np.max(box[:,1]))
+        # box = np.uint8(box)
+        # print(box)
+        [Xmin, Xmax, Ymin, Ymax] = [np.min(box[:, 1]), np.max(
+            box[:, 1]), np.min(box[:, 0]), np.max(box[:, 0])]
+        ar = (Xmax-Xmin)/(Ymax-Ymin)
+        if ar >= 0.5 and ar <= 1.5:
+            r0 = int(Ymin)  # -staff_height*2
+            r1 = int(Ymax)  # +staff_height*2
+            c0 = int(Xmin)  # -staff_space
+            c1 = int(Xmax)  # +staff_space
+            r0 = max(r0, 0)
+            r1 = min(r1, staff_lines.shape[0])
+            c0 = max(c0, 0)
+            c1 = min(c1, staff_lines.shape[1])
+            center = (r0+r1)//2
+            print("row0 "+str(r0) + " row1 " + str(r1))
+            horz_hist = np.sum(
+                staff_lines[center-staff_height//2:center+staff_height//2, :], axis=1)
+            maximum = np.max(horz_hist)
+            if maximum < staff_lines.shape[1]*.01:
+                print("space")
+            else:
+                print("line")
+            show_images([s_c[charPos[0]:charPos[1],
+                             charPos[2]:charPos[3]], s_c, note])
+        # ar = 1/ar
+        # if ( ( ar<=3.5 and ar>= 2.5)):
+
+        # print(ar)
+        # rr, cc = sk.draw.rectangle(start=(Ymin, Xmin), end=(
+        #     Ymax, Xmax), shape=newImg.shape)
+
+        # rr = rr.astype(int)
+        # cc = cc.astype(int)
+        # newImg[rr, cc] = True
+
+    return
+
+
+def fixStaffLines(staff_lines, staff_height, staff_space):
+    newImg = np.zeros(staff_lines.shape)
+    cdef int i = 0
+    cnt = 0
+    t = 5
+    while i < newImg.shape[0]:
+        x = np.sum(staff_lines[i, :])
+        if x > t:
+            # print("line")
+            # for j in range(5):
+            newImg[i:i+staff_height, :] = True
+            i += 1 * (staff_space+staff_height)
+        i += 1
+    # show_images([newImg])
+    return newImg
+
+
 def runCode():
     cdef int T_LEN
-    folder = 'hard'
+    folder = 'easy'
     try:
         os.mkdir(folder + "Out")
     except:
@@ -506,19 +579,26 @@ def runCode():
         img = 255 * img
         img = img.astype(np.uint8)
         img = binarize(img, 101)
-        # img_o = np.copy(img)
+        img_o = np.copy(img)
         # show_images([img_o])
         img = sk.morphology.binary_dilation(img)
         staff_height, staff_space = verticalRunLength(img)
         T_LEN = min(2*staff_height, staff_height+staff_space)
         ########
         staffLines = extractStaffLines(img, T_LEN)
-
-        # show_images([staffLines])
-
+        se = np.ones((1, staff_space*2))
+        # #staffLines = sk.morphology.thin(staffLines)
+        staffLines = sk.morphology.binary_opening(staffLines, se)
+        # staffLines = sk.morphology.binary_dilation(staffLines, se)
+        # se = np.ones((1, 150))
+        # staffLines = sk.morphology.binary_dilation(staffLines, se)
+        show_images([sk.feature.canny(staffLines)])
+        # fixed_staff_lines = fixStaffLines(
+        #    staffLines, staff_height, staff_space)
         ########
         ########
-        img_1 = extractCircleNotes(img, staff_height)
+        print(staff_space)
+        img_1 = extractCircleNotes(img, staff_space)
         img_1 = img_1 > 0
         # show_images([img_1])
         ##########
@@ -548,9 +628,9 @@ def runCode():
             pass
         for line in lines:
             try:
-                estimateStaffLines(
-                    staffLines[line[0]:line[1], line[2]:line[3]], staff_height)
-                continue
+                # estimateStaffLines(
+                #     staffLines[line[0]:line[1], line[2]:line[3]], staff_height)
+                # continue
                 i += 1
                 chars = charachterSegmentation(
                     removed_staff[line[0]:line[1], line[2]:line[3]], 0*staff_height*2)
@@ -564,6 +644,8 @@ def runCode():
                     # print(char)
                     # show_images(
                     #     [removed_staff[line[0]:line[1], line[2]:line[3]][char[0]:char[1], char[2]:char[3]]])
+                    getFlatHeadNotePos(staffLines[line[0]:line[1], line[2]:line[3]], removed_staff[line[0]:line[1],
+                                                                                                   line[2]:line[3]][char[0]:char[1], char[2]:char[3]], staff_space, char, staff_height)
                     io.imsave(folder + "Out/"+filename+"_img/"+filename+"_lines"+str(i)+"/"+filename+"_line_"+str(i) + "_char_"+str(
                         j)+".png", sk.img_as_uint(removed_staff[line[0]:line[1], line[2]:line[3]][char[0]:char[1], char[2]:char[3]]))
                     j += 1
