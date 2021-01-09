@@ -6,7 +6,8 @@ import numpy as np
 import skimage as sk
 from commonfunctions import *
 
-idx = 0
+'''
+idx=0
 items = os.listdir("beams")
 for img_name in items:
     img = io.imread("beams/{}".format(img_name), as_gray=True)
@@ -19,3 +20,15 @@ for img_name in items:
         plt.imsave("beams/{}/{}.png".format(str(idx), str(i)),
                    imgNew, cmap='gray')
     idx += 1
+
+'''
+
+idx = 0
+for file_name in os.listdir("dataset_mixed/"):
+    items = os.listdir("dataset_mixed/{}/".format(file_name))
+    for img_name in items:
+        img = io.imread(
+            "dataset_mixed/{}/{}".format(file_name, img_name), as_gray=True)
+        img = (img <= sk.filters.threshold_otsu(img)).astype(int)
+        plt.imsave("dataset_mixed/{}/{}".format(file_name,
+                                                img_name), img, cmap='gray')
