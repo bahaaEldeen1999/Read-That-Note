@@ -530,14 +530,18 @@ def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, im
 
     # fill notes
     # se = np.ones((staff_space, staff_space))
-    edges = sk.feature.canny(note)
+    edges = np.copy(note)  # sk.feature.canny(note)
     # filled_note = sp.ndimage.binary_fill_holes(edges, se)
     # filled_note = sp.ndimage.binary_fill_holes(filled_note)
+    #edges = edges.astype(int)*255
     labels = sk.morphology.label(edges)
     labelCount = np.bincount(labels.ravel())
     background = np.argmax(labelCount)
+    #print(background, labels)
     edges[labels != background] = True
-    show_images([edges])
+    img = edges
+    img = sk.morphology.binary_closing(img)
+    # show_images([img])
     ############
     # np.ones((staff_space, staff_space))
     se = sk.morphology.disk(staff_space//2)
@@ -548,7 +552,7 @@ def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, im
     img = sk.morphology.binary_dilation(img, se)
     #staff_lines = sk.morphology.binary_opening(staff_lines)
 
-    # show_images([staff_lines])
+    # show_images([img])
     bounding_boxes = sk.measure.find_contours(img, 0.8)
     # newImg = np.zeros(img.shape)
     # print(len(bounding_boxes))
