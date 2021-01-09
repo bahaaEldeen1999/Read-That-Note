@@ -1,4 +1,6 @@
+from matplotlib.pyplot import show
 from commonfunctions import *
+from preprocessing import *
 import skimage as sk
 import numpy as np
 import matplotlib as mp
@@ -12,7 +14,10 @@ get note head charachter basedon its position
 
 
 def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, img_o=None):
+    if charPos[3]-charPos[2] < staff_space:
+        return [-1]
     img = np.copy(note)
+    # show_images([img])
     s_c = np.copy(staff_lines)
     n_c = np.copy(note)
     s_c = s_c > 0
@@ -21,25 +26,30 @@ def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, im
         ] = s_c[charPos[0]:charPos[1], charPos[2]:charPos[3]] | n_c
     err = staff_space//8
     edges = np.copy(note)
-    labels = sk.morphology.label(edges)
-    labelCount = np.bincount(labels.ravel())
-    background = np.argmax(labelCount)
-    edges[labels != background] = True
-    img = edges
+    #edges = edges.astype(int)*255
+    # show_images([edges])
+    se = sk.morphology.disk(staff_space//16)
+    img = sk.morphology.binary_closing(img, se)
+    img = sp.ndimage.morphology.binary_fill_holes(img)
+
+    show_images([img])
     img = sk.morphology.binary_closing(img)
     se = sk.morphology.disk(staff_space//2)
     img = sk.morphology.binary_opening(img, se)
     img = sk.morphology.binary_erosion(img, se)
-    img = sk.morphology.binary_erosion(img)
+    #img = sk.morphology.binary_erosion(img)
     se = sk.morphology.disk(staff_space//4)
     img = sk.morphology.binary_dilation(img, se)
+    img = sk.morphology.binary_erosion(img)
+    # show_images([img])
     bounding_boxes = sk.measure.find_contours(img, 0.8)
-    output = []
+    output = [charPos[2]]
+    # print(len(bounding_boxes))
     for box in bounding_boxes:
         [Xmin, Xmax, Ymin, Ymax] = [np.min(box[:, 1]), np.max(
             box[:, 1]), np.min(box[:, 0]), np.max(box[:, 0])]
         ar = (Xmax-Xmin)/(Ymax-Ymin)
-        if ar >= 0.5 and ar <= 1.5:
+        if True:
             r0 = int(Ymin)
             r1 = int(Ymax)
             c0 = int(Xmin)
