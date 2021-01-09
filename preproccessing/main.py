@@ -35,7 +35,7 @@ def mainPipeLine(img_original):
     staffLines = removeMusicalNotes(img, T_LEN)
     # get fixed staff lines
     se = np.ones((1, 55))
-    fixed_staff_lines = restoreStaffLines(staffLines, T_LEN, img)
+    fixed_staff_lines = restoreStaffLines(staffLines, T_LEN, img_o)
     fixed_staff_lines = sk.morphology.binary_opening(fixed_staff_lines, se)
     fixed_staff_lines = fixStaffLines(
         fixed_staff_lines, staff_height, staff_space, img_o)
@@ -50,8 +50,10 @@ def mainPipeLine(img_original):
         for char in bounds:
             try:
                 # print(char)
+                # show_images(
+                #    [fixed_staff_lines[line[0]: line[1], line[2]: line[3]]])
                 char = [0, removed_staff[line[0]:line[1], line[2]
-                    :line[3]].shape[0], int(char[2]), int(char[3])]
+                    :line[3]].shape[0], int(char[2])-2, int(char[3])+2]
                 out = getFlatHeadNotePos(fixed_staff_lines[line[0]: line[1], line[2]: line[3]], removed_staff[line[0]: line[1],
                                                                                                               line[2]: line[3]][char[0]: char[1], char[2]: char[3]], staff_space, char, staff_height)
                 lineOut.append(
@@ -61,7 +63,19 @@ def mainPipeLine(img_original):
                 pass
         print("--------Line----------")
         lineOut = sorted(lineOut, key=itemgetter(0))
-        print(lineOut)
+        lineS = ""
+        for arr in lineOut:
+            if arr[0] == -1:
+                continue
+            a = arr[1:]
+            a = np.sort(a)
+            if not len(a):
+                continue
+            lineS += "{ "
+            for x in a:
+                lineS += x+" "
+            lineS += "}"
+        print(lineS)
     return img
 
 
