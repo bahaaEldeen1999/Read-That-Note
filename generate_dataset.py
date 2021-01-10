@@ -24,11 +24,14 @@ for img_name in items:
 '''
 
 idx = 0
-for file_name in os.listdir("dataset_mixed/"):
-    items = os.listdir("dataset_mixed/{}/".format(file_name))
+for file_name in os.listdir("dataset_mixed2 (2)/dataset_mixed2/"):
+    if file_name == 'dataset_mixed' or file_name == 't4':
+        continue
+    items = os.listdir(
+        "dataset_mixed2 (2)/dataset_mixed2/{}/".format(file_name))
     for img_name in items:
         img = io.imread(
-            "dataset_mixed/{}/{}".format(file_name, img_name), as_gray=True)
+            "dataset_mixed2 (2)/dataset_mixed2/{}/{}".format(file_name, img_name), as_gray=True)
         img = (img <= sk.filters.threshold_otsu(img)).astype(int)
-        plt.imsave("dataset_mixed/{}/{}".format(file_name,
-                                                img_name), img, cmap='gray')
+        plt.imsave("dataset_mixed2 (2)/dataset_mixed2/{}/{}".format(file_name,
+                                                                    img_name), img, cmap='gray')
