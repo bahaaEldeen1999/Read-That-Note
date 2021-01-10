@@ -14,17 +14,18 @@ import os
 import random
 
 
-def check_chord_or_beam(img, staff_space):
-    '''
+def check_chord_or_beam(img_input, staff_space):
+          '''
         **img is assumed to be binarized
         returns:
             0 --> chord
-            1 --> beam
+            1 --> beam /16
+            2 --> beam /32
            -1 --> neither
     '''
 
     se = sk.morphology.disk(staff_space//2)
-    img = sk.morphology.binary_opening(img, se)
+    img = sk.morphology.binary_opening(img_input, se)
     img = sk.morphology.binary_erosion(img, se)
     img = sk.morphology.binary_erosion(img)
     se = sk.morphology.disk(staff_space//4)
@@ -35,28 +36,32 @@ def check_chord_or_beam(img, staff_space):
         return -1
 
     newImg = img.copy()
-    centers, cnt = [], 0
+    centers, count_disks_spacing = [], 0
 
     for box in bounding_boxes:
-        [Xmin, Xmax, Ymin, Ymax] = [np.min(box[:, 1]), np.max(
-            box[:, 1]), np.min(box[:, 0]), np.max(box[:, 0])]
-        rr, cc = sk.draw.rectangle(
-            start=(Ymin, Xmin), end=(Ymax, Xmax), shape=newImg.shape)
-        rr, cc = rr.astype(int), cc.astype(int)
-        newImg[rr, cc] = 1
+        [Xmin, Xmax, Ymin, Ymax] = [np.min(box[:, 1]), np.max(box[:, 1]), np.min(box[:, 0]), np.max(box[:, 0])]
         centers.append([Ymin+Ymin//2, Xmin+Xmin//2])
 
     for i in range(1, len(centers)):
         if abs(centers[i][1] - centers[i-1][1]) > 70:
-            cnt += 1
+            count_disks_spacing += 1
 
-    if cnt == len(centers)-1:
-        return 1
-    else:
+    if count_disks_spacing != len(centers)-1:
         return 0
+    
+    img = sk.morphology.thin(sk.img_as_bool(img_input))
+    h, theta, d = sk.transform.hough_line(img)
+    h, theta, d = sk.transform.hough_line_peaks(h, theta, d)
+    angels= np.rad2deg(theta)
+    number_of_lines = np.sum(np.abs(angels) > 10)
+    
+    if number_of_lines < 1 or number_of_lines > 2:
+        return -1
+    else:
+         return number_of_lines
+        
 
-
-img1 = io.imread("chord9.png", as_gray=True)
-print(check_chord_or_beam(img1, 36))
-img2 = io.imread("beam4.png", as_gray=True)
-print(check_chord_or_beam(img2, 17))
+# 1 & 3 & 4 & 5 --> 36
+# 2 --> 17
+img2 = io.imread("beam3.png", as_gray=True)
+print(check_chord_or_beam(img2,36))
