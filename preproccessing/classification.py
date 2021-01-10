@@ -6,7 +6,9 @@ import numpy as np
 import matplotlib as mp
 import scipy as sp
 from heapq import *
-import cv2 as cv
+import cv2
+import joblib
+import os.path
 
 '''
 get note head charachter basedon its position
@@ -17,7 +19,7 @@ def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, im
     if charPos[3]-charPos[2] < staff_space:
         return [-1]
     img = np.copy(note)
-    # show_images([img])
+    show_images([img])
     s_c = np.copy(staff_lines)
     n_c = np.copy(note)
     s_c = s_c > 0
@@ -33,11 +35,13 @@ def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, im
     # img = sp.ndimage.morphology.binary_fill_holes(img)
 
     # show_images([img])
-    img = sk.morphology.binary_closing(img)
     #img = sk.morphology.binary_closing(img)
+    #img = sk.morphology.binary_dilation(img)
     se = sk.morphology.disk(staff_space//2-1)
+    # se[staff_space//4:3*staff_space//4+1,
+    #     staff_space//4:3*staff_space//4+1] = 0
     img = sk.morphology.binary_opening(img, se)
-    # show_images([img])
+    show_images([img])
     #se = sk.morphology.disk((staff_space//3))
     se = sk.morphology.disk(staff_space//4)
     img = sk.morphology.binary_erosion(img)
@@ -48,7 +52,7 @@ def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, im
     se = sk.morphology.disk(staff_space//8+1)
     img = sk.morphology.binary_dilation(img, se)
     img = sk.morphology.binary_erosion(img)
-    # show_images([img])
+    show_images([img])
     bounding_boxes = sk.measure.find_contours(img, 0.8)
     output = [charPos[2]]
     # print(len(bounding_boxes))
@@ -56,7 +60,7 @@ def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, im
         [Xmin, Xmax, Ymin, Ymax] = [np.min(box[:, 1]), np.max(
             box[:, 1]), np.min(box[:, 0]), np.max(box[:, 0])]
         ar = (Xmax-Xmin)/(Ymax-Ymin)
-        if True:
+        if ar >= 0.5 and ar <= 1.5:
             r0 = int(Ymin)
             r1 = int(Ymax)
             r0 = max(r0, 0)
@@ -150,3 +154,149 @@ def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, im
                         output.append("b2")
 
     return output
+
+
+'''
+check if the note entered in chord or beam
+'''
+
+
+def check_chord_or_beam(img, staff_space):
+    '''
+        **img is assumed to be binarized
+        returns:
+            0 --> chord
+            1 --> beam
+           -1 --> neither
+    '''
+
+    se = sk.morphology.disk(staff_space//2)
+    img = sk.morphology.binary_opening(img, se)
+    img = sk.morphology.binary_erosion(img, se)
+    img = sk.morphology.binary_erosion(img)
+    se = sk.morphology.disk(staff_space//4)
+    img = sk.morphology.binary_dilation(img, se)
+    bounding_boxes = sk.measure.find_contours(img, 0.8)
+
+    if len(bounding_boxes) < 2:
+        return -1
+
+    newImg = img.copy()
+    centers, cnt = [], 0
+
+    for box in bounding_boxes:
+        [Xmin, Xmax, Ymin, Ymax] = [np.min(box[:, 1]), np.max(
+            box[:, 1]), np.min(box[:, 0]), np.max(box[:, 0])]
+        rr, cc = sk.draw.rectangle(
+            start=(Ymin, Xmin), end=(Ymax, Xmax), shape=newImg.shape)
+        rr, cc = rr.astype(int), cc.astype(int)
+        newImg[rr, cc] = 1
+        centers.append([Ymin+Ymin//2, Xmin+Xmin//2])
+
+    for i in range(1, len(centers)):
+        if abs(centers[i][1] - centers[i-1][1]) > 70:
+            cnt += 1
+
+    if cnt == len(centers)-1:
+        return 1
+    else:
+        return 0
+
+
+'''
+predict the note given
+'''
+
+
+def classfiyimg(img, staff_space):
+    out = check_chord_or_beam(img, staff_space)
+    if(out == -1):
+        features = extract_features(img)
+        print(loaded_model.predict([features]))
+
+
+'''
+extract features for the hog classifier
+'''
+
+
+def extract_features(img):
+    img = img.astype(int)
+    # show_images([img])
+
+    target_img_size = (64, 64)
+    img = cv2.resize(img.astype('uint8'), target_img_size)
+    win_size = (64, 64)
+    cell_size = (8, 8)
+    block_size_in_cells = (4, 4)
+    block_size = (block_size_in_cells[1] * cell_size[1],
+                  block_size_in_cells[0] * cell_size[0])
+    block_stride = (cell_size[1], cell_size[0])
+    nbins = 4
+    hog = cv2.HOGDescriptor(win_size, block_size,
+                            block_stride, cell_size, nbins)
+    h = hog.compute(img)
+    h = h.flatten()
+
+    return h.flatten()
+
+
+'''
+load dataset to be trainedon/tested
+'''
+
+
+def load_dataset():
+    path_to_dataset = r'dataset_mixed2\dataset_mixed'
+    features = []
+    labels = []
+    img_filenames = os.listdir(path_to_dataset)
+
+    for i, fn in enumerate(img_filenames):
+        if fn.split('.')[-1] != 'jpg' and fn.split('.')[-1] != 'bmp' and fn.split('.')[-1] != 'png':
+            continue
+
+        label = fn.split('-')[0]
+      #  print(label)
+        labels.append(label)
+
+        path = os.path.join(path_to_dataset, fn)
+        img = cv2.imread(path)
+        features.append(extract_features(img))
+        # show an update every 1,000 images
+        if i > 0 and i % 1000 == 0:
+            print("[INFO] processed {}/{}".format(i, len(img_filenames)))
+
+    return features, labels
+
+
+'''
+load dataset and run and train dataset
+'''
+
+
+def run_experiment():
+
+    # Load dataset with extracted features
+    print('Loading dataset. This will take time ...')
+    features, labels = load_dataset()
+#    print(features)
+#    print(labels)
+    print('Finished loading dataset.')
+
+    # Since we don't want to know the performance of our classifier on images it has seen before
+    # we are going to withhold some images that we will test the classifier on after training
+    train_features, test_features, train_labels, test_labels = train_test_split(
+        features, labels, test_size=0.2, random_state=random_seed)
+
+    for model_name, model in classifiers.items():
+        print('############## Training', model_name, "##############")
+        # Train the model only on the training features
+        model.fit(train_features, train_labels)
+        # save the model to disk
+        filename = 'finalized_model.sav'
+        joblib.dump(model, filename)
+
+        # Test the model on images it hasn't seen before
+        accuracy = model.score(test_features, test_labels)
+        print(model_name, 'accuracy:', accuracy*100, '%')

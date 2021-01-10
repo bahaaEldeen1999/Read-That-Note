@@ -7,6 +7,17 @@ from operator import itemgetter
 
 
 def mainPipeLine(img_original):
+    # load model
+    if os.path.isfile('finalized_model.sav'):
+        ##### the model already exit####
+        print("model already exit")
+    else:
+        ### not exit so train ###
+        run_experiment()
+
+    # load the model from disk
+    loaded_model = joblib.load('finalized_model.sav')
+    # get copy of image
     img = np.copy(img_original)
     # deskew the image
     img = deskew(img)
@@ -42,25 +53,51 @@ def mainPipeLine(img_original):
     fixed_staff_lines = sk.morphology.binary_opening(fixed_staff_lines, se)
     # get staff lines from image
     lines = classicLineSegmentation(img, staff_space)
+    i = 0
     for line in lines:
         lineOut = []
         # get notes bounds from the image without the staff lines
         #show_images([removed_staff[line[0]:line[1], line[2]:line[3]]])
         bounds = char_seg(removed_staff[line[0]:line[1], line[2]:line[3]])
         for char in bounds:
+            i += 1
             try:
-                # print(char)
-                # show_images(
-                #    [fixed_staff_lines[line[0]: line[1], line[2]: line[3]]])
-                char = [0, removed_staff[line[0]:line[1], line[2]
-                    :line[3]].shape[0], int(char[2])-2, int(char[3])+2]
-                out = getFlatHeadNotePos(fixed_staff_lines[line[0]: line[1], line[2]: line[3]], removed_staff[line[0]: line[1],
-                                                                                                              line[2]: line[3]][char[0]: char[1], char[2]: char[3]], staff_space, char, staff_height)
-                lineOut.append(
-                    out)
+                #######
+                # classify note
+                char = [0, removed_staff[line[0]:line[1], line[2]:line[3]].shape[0], int(char[2])-2, int(char[3])+2]
+                if char[3]-char[2] < staff_space:
+                    continue
+                charImg = removed_staff[line[0]: line[1], line[2]
+                    : line[3]][char[0]: char[1], char[2]: char[3]]
+                io.imsave("test_newOut\char_"+str(i)+".png", sk.img_as_uint(
+                    charImg))
+                charImg = np.array(charImg)
+                # a,b,c,d ==> wrong classificion
+                # start - # - ##  - & - && - end - timestamp - empty string True => end
+                # False => get position
+
+                # symbol = loaded_model.predict([extract_features(charImg)])
+                # print(symbol)
+                # show_images([charImg])
+                # getFlatHeadNotePos(fixed_staff_lines[line[0]: line[1], line[2]: line[3]], removed_staff[line[0]: line[1],
+                #                                                                                         line[2]: line[3]][char[0]: char[1], char[2]: char[3]], staff_space, char, staff_height)
             except Exception as e:
                 print(e)
                 pass
+            #######
+            # try:
+            #     # print(char)
+            #     # show_images(
+            #     #    [fixed_staff_lines[line[0]: line[1], line[2]: line[3]]])
+            #     char = [0, removed_staff[line[0]:line[1], line[2]
+            #         :line[3]].shape[0], int(char[2])-2, int(char[3])+2]
+            #     out = getFlatHeadNotePos(fixed_staff_lines[line[0]: line[1], line[2]: line[3]], removed_staff[line[0]: line[1],
+            #                                                                                                   line[2]: line[3]][char[0]: char[1], char[2]: char[3]], staff_space, char, staff_height)
+            #     lineOut.append(
+            #         out)
+            # except Exception as e:
+            #     print(e)
+            #     pass
         print("--------Line----------")
         lineOut = sorted(lineOut, key=itemgetter(0))
         lineS = ""

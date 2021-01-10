@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib as mp
 import scipy as sp
 from heapq import *
-import cv2 as cv
+import cv2
 
 '''
 convert image of any type to uint 8 byte
