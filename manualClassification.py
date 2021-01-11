@@ -15,7 +15,7 @@ import random
 
 
 def check_chord_or_beam(img_input, staff_space):
-          '''
+    '''
         **img is assumed to be binarized
         returns:
             0 --> chord
@@ -39,29 +39,30 @@ def check_chord_or_beam(img_input, staff_space):
     centers, count_disks_spacing = [], 0
 
     for box in bounding_boxes:
-        [Xmin, Xmax, Ymin, Ymax] = [np.min(box[:, 1]), np.max(box[:, 1]), np.min(box[:, 0]), np.max(box[:, 0])]
+        [Xmin, Xmax, Ymin, Ymax] = [np.min(box[:, 1]), np.max(
+            box[:, 1]), np.min(box[:, 0]), np.max(box[:, 0])]
         centers.append([Ymin+Ymin//2, Xmin+Xmin//2])
 
     for i in range(1, len(centers)):
-        if abs(centers[i][1] - centers[i-1][1]) > 70:
+        if abs(centers[i][1] - centers[i-1][1]) > 2*staff_space:
             count_disks_spacing += 1
 
     if count_disks_spacing != len(centers)-1:
         return 0
-    
+
     img = sk.morphology.thin(sk.img_as_bool(img_input))
     h, theta, d = sk.transform.hough_line(img)
     h, theta, d = sk.transform.hough_line_peaks(h, theta, d)
-    angels= np.rad2deg(theta)
+    angels = np.rad2deg(theta)
     number_of_lines = np.sum(np.abs(angels) > 10)
-    
+
     if number_of_lines < 1 or number_of_lines > 2:
         return -1
     else:
-         return number_of_lines
-        
+        return number_of_lines
+
 
 # 1 & 3 & 4 & 5 --> 36
 # 2 --> 17
 img2 = io.imread("beam3.png", as_gray=True)
-print(check_chord_or_beam(img2,36))
+print(check_chord_or_beam(img2, 36))

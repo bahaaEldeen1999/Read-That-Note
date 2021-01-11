@@ -6,32 +6,33 @@ import numpy as np
 import skimage as sk
 from commonfunctions import *
 
-'''
-idx=0
-items = os.listdir("beams")
+
+items = os.listdir("imgs")
 for img_name in items:
-    img = io.imread("beams/{}".format(img_name), as_gray=True)
-    (rows, cols) = img.shape
-    os.mkdir("beams/{}".format(str(idx)))
-    print(img.shape)
-    for i in range(1, 360):
-        imgNew = img.copy()
-        imgNew = sk.transform.rotate(imgNew, i, resize=True, mode='edge')
-        plt.imsave("beams/{}/{}.png".format(str(idx), str(i)),
-                   imgNew, cmap='gray')
-    idx += 1
+    img = io.imread("imgs/{}".format(img_name), as_gray=True)
+    label = img_name.split('.')[0]
+    os.mkdir("imgs/{}".format(label))
+    idx = 1
+    for rotation in range(1, 360):
+        for scale in range(0.1, 3, 0.1):
+            imgNew = img.copy()
+            imgNew = sk.transform.warp(
+                imgNew, sk.transform.SimilarityTransform(scale=scale, rotation=rotation))
+            plt.imsave("imgs/{}/{}{}.png".format(str(label), label, str(idx)),
+                       imgNew, cmap='gray')
+            idx += 1
 
-'''
 
-idx = 0
-for file_name in os.listdir("dataset_mixed2 (2)/dataset_mixed2/"):
-    if file_name == 'dataset_mixed' or file_name == 't4':
-        continue
-    items = os.listdir(
-        "dataset_mixed2 (2)/dataset_mixed2/{}/".format(file_name))
-    for img_name in items:
-        img = io.imread(
-            "dataset_mixed2 (2)/dataset_mixed2/{}/{}".format(file_name, img_name), as_gray=True)
-        img = (img <= sk.filters.threshold_otsu(img)).astype(int)
-        plt.imsave("dataset_mixed2 (2)/dataset_mixed2/{}/{}".format(file_name,
-                                                                    img_name), img, cmap='gray')
+# idx = 0
+# imgNew = sk.transform.rotate(imgNew, i, resize=True, mode='edge')
+# for file_name in os.listdir("dataset_mixed2 (2)/dataset_mixed2/"):
+#     if file_name == 'dataset_mixed' or file_name == 't4':
+#         continue
+#     items = os.listdir(
+#         "dataset_mixed2 (2)/dataset_mixed2/{}/".format(file_name))
+#     for img_name in items:
+#         img = io.imread(
+#             "dataset_mixed2 (2)/dataset_mixed2/{}/{}".format(file_name, img_name), as_gray=True)
+#         img = (img <= sk.filters.threshold_otsu(img)).astype(int)
+#         plt.imsave("dataset_mixed2 (2)/dataset_mixed2/{}/{}".format(file_name,
+#                                                                     img_name), img, cmap='gray')

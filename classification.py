@@ -19,7 +19,7 @@ random_seed = 42
 random.seed(random_seed)
 np.random.seed(random_seed)
 
-dataset_path = r'dataset_mixed/'
+dataset_path = r'dataset/'
 traget_img_size = (40, 40)
 categories = 34
 
@@ -42,10 +42,10 @@ def load_dataset(img_names, traget_img_size, max_size, istest=False):
         descriptor = hog(img, orientations=hog_orientations, pixels_per_cell=hog_pixels_per_block,
                          cells_per_block=hog_cells_per_block, feature_vector=True)
 
-      if not istest:
+        if not istest:
             max_size = max(max_size, descriptor.shape[0])
-      temp.append(descriptor)
-      y.append(img_name.split('-')[0])
+        temp.append(descriptor)
+        y.append(img_name.split('-')[0])
 
     for desc in temp:
         desc = (desc.flatten()).flatten()
@@ -57,7 +57,8 @@ def load_dataset(img_names, traget_img_size, max_size, istest=False):
     else:
         return np.array(x), np.array(y), max_size
 
-if __name__ == "__main__":          
+
+if __name__ == "__main__":
     if os.path.exists("classifier.pickle"):
         print("loading the model")
         model = pickle.load(open("classifier.pickle", "rb"))
@@ -70,10 +71,12 @@ if __name__ == "__main__":
             train_x = np.append(train_x, x)
             test_x = np.append(test_x, y)
 
-        train_x, train_y, max_size = load_dataset(train_x, traget_img_size, 0, False)
+        train_x, train_y, max_size = load_dataset(
+            train_x, traget_img_size, 0, False)
         test_x, test_y = load_dataset(test_x, traget_img_size, max_size, True)
 
-        print("training_set shape", train_x.shape, " test_set shape", test_x.shape)
+        print("training_set shape", train_x.shape,
+              " test_set shape", test_x.shape)
 
         model = model.fit(train_x, train_y)
 
@@ -81,10 +84,7 @@ if __name__ == "__main__":
         with open("classifier.pickle", "wb") as file:
             pickle.dump(model, file)
 
-
-
     predctions = model.predict(test_x)
     print(predctions)
     # accuracy = model.score(test_x, test_y)
     # print("accuracy={}%".format(accuracy*100.0))
-
