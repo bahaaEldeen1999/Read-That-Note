@@ -64,21 +64,22 @@ def mainPipeLine(img_original):
             try:
                 #######
                 # classify note
-                char = [0, removed_staff[line[0]:line[1], line[2]:line[3]].shape[0], int(char[2])-2, int(char[3])+2]
+                char = [0, removed_staff[line[0]:line[1], line[2]
+                    :line[3]].shape[0], int(char[2])-2, int(char[3])+2]
                 if char[3]-char[2] < staff_space:
                     continue
-                charImg = removed_staff[line[0]: line[1], line[2]
-                    : line[3]][char[0]: char[1], char[2]: char[3]]
-                io.imsave("test_newOut\char_"+str(i)+".png", sk.img_as_uint(
-                    charImg))
-                charImg = np.array(charImg)
+                charImg = removed_staff[line[0]: line[1], line[2]                                        : line[3]][char[0]: char[1], char[2]: char[3]]
+                # io.imsave("test_newOut\char_"+str(i)+".png", sk.img_as_uint(
+                #     charImg))
+                # charImg = np.array(charImg)
                 # a,b,c,d ==> wrong classificion
                 # start - # - ##  - & - && - end - timestamp - empty string True => end
                 # False => get position
 
                 # symbol = loaded_model.predict([extract_features(charImg)])
                 # print(symbol)
-                # show_images([charImg])
+                print(check_chord_or_beam(charImg, staff_space))
+                show_images([charImg])
                 # getFlatHeadNotePos(fixed_staff_lines[line[0]: line[1], line[2]: line[3]], removed_staff[line[0]: line[1],
                 #                                                                                         line[2]: line[3]][char[0]: char[1], char[2]: char[3]], staff_space, char, staff_height)
             except Exception as e:
