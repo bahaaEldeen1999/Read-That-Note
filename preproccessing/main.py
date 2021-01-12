@@ -103,7 +103,8 @@ def mainPipeLine(filename, img_original):
             try:
                 #######
                 # classify note
-                char = [0, removed_staff_c[line[0]:line[1], line[2]:line[3]].shape[0], int(char[2])-2, int(char[3])+2]
+                char = [0, removed_staff_c[line[0]:line[1], line[2]
+                    :line[3]].shape[0], int(char[2])-2, int(char[3])+2]
                 # Classify Logic
                 symbols = ['#', '##', '&', '&&', '', '.']
                 open_divider = ["_1", "_2"]
@@ -168,8 +169,7 @@ def mainPipeLine(filename, img_original):
         lineFixed = getLineFromArr(lineOut)
         linesOut.append(lineFixed)
 
-    outfunction(linesOut, filename)
-    return img
+    return linesOut
 
 
 if __name__ == "__main__":
@@ -191,4 +191,5 @@ if __name__ == "__main__":
             input_folder_path, filename), as_gray=True)
         filename = get_filename_without_extension(filename)
         print(filename)
-        mainPipeLine(filename, img)
+        linesOut = mainPipeLine(filename, img)
+        outfunction(linesOut, output_folder_path+"/"+filename)
