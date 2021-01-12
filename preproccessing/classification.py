@@ -1,6 +1,7 @@
 from matplotlib.pyplot import show
 from commonfunctions import *
 from preprocessing import *
+from output_handler import *
 import skimage as sk
 import numpy as np
 import matplotlib as mp
@@ -10,12 +11,13 @@ import cv2
 import joblib
 import os.path
 from operator import itemgetter
+
 '''
 get note head charachter basedon its position
 '''
 
 
-def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, img_o=None):
+def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, img_o, isBeamOrChord):
     if charPos[3]-charPos[2] < staff_space:
         return [-1]
     img = np.copy(note)
@@ -59,6 +61,7 @@ def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, im
     #print("no of notes")
     # print(len(bounding_boxes))
     # show_images([img])
+    cols = []
     for box in bounding_boxes:
         [Xmin, Xmax, Ymin, Ymax] = [np.min(box[:, 1]), np.max(
             box[:, 1]), np.min(box[:, 0]), np.max(box[:, 0])]
@@ -68,6 +71,7 @@ def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, im
             r1 = int(Ymax)
             r0 = max(r0, 0)
             r1 = min(r1, staff_lines.shape[0])
+            col = int(Xmin)
             center = (r0+r1)//2
             center2 = staff_lines.shape[1]//2
             # print("center "+str(center))
@@ -90,6 +94,7 @@ def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, im
                 if x >= t:
                     up += 1
             # print(maximum)
+            cols.append(col)
             if maximum < staff_lines.shape[1]:
                 # print("space")
                 if up == 0:
@@ -155,7 +160,16 @@ def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, im
                         output.append("a2")
                     else:
                         output.append("b2")
-    output = sorted(output)
+    if isBeamOrChord == 0:
+        output = sorted(output)
+    else:
+        newArr = []
+        for i in range(len(cols)):
+            newArr.append([cols[i], output[i]])
+        newArr = sorted(newArr, key=itemgetter(0))
+        output = []
+        for i in range(len(cols)):
+            output.append(newArr[i][1])
     output.insert(0, charPos[2])
     return output
 
@@ -247,15 +261,16 @@ def extract_features(img):
     img = img.astype(int)
     # show_images([img])
 
-    target_img_size = (64, 64)
+    target_img_size = (78, 78)
     img = cv2.resize(img.astype('uint8'), target_img_size)
     win_size = (64, 64)
     cell_size = (8, 8)
-    block_size_in_cells = (4, 4)
+    block_size_in_cells = (2, 2)
+
     block_size = (block_size_in_cells[1] * cell_size[1],
                   block_size_in_cells[0] * cell_size[0])
     block_stride = (cell_size[1], cell_size[0])
-    nbins = 4
+    nbins = 15  # Number of orientation bins
     hog = cv2.HOGDescriptor(win_size, block_size,
                             block_stride, cell_size, nbins)
     h = hog.compute(img)

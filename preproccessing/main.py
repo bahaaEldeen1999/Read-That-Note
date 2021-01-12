@@ -7,13 +7,6 @@ from operator import itemgetter
 
 
 def mainPipeLine(filename, img_original):
-    # load model
-    if os.path.isfile('finalized_model.sav'):
-        ##### the model already exit####
-        print("model already exit")
-    else:
-        ### not exit so train ###
-        run_experiment()
 
     # load the model from disk
     loaded_model = joblib.load('finalized_model.sav')
@@ -27,9 +20,6 @@ def mainPipeLine(filename, img_original):
     img = binarize(img)
     # get copy of priginal image
     img_o = np.copy(img)
-    # convert from True False to 0-1
-    #img = np.array(img)
-    # Get Staff-height, Staffs-Space
 
     #################################
     # work on multiple images       #
@@ -62,12 +52,9 @@ def mainPipeLine(filename, img_original):
                                 j*patch_width: (j+1)*patch_width] = removed_staff
             except:
                 pass
-    # show_images([removed_staff_c])
-    #removed_staff_c = sk.morphology.binary_opening(removed_staff_c)
     io.imsave("test_newOut/removed_staff"+filename+".png", sk.img_as_uint(
         removed_staff_c))
     print("done "+filename)
-    # return
     #########################################
     # extract staff lines from image
     T_LEN = min(2*staff_height_g, staff_height_g+staff_space_g)
@@ -116,10 +103,8 @@ def mainPipeLine(filename, img_original):
             try:
                 #######
                 # classify note
-                char = [0, removed_staff_c[line[0]:line[1], line[2]                                           :line[3]].shape[0], int(char[2])-2, int(char[3])+2]
-                # a,b,c,d ==> wrong classificion
-                # start - # - ##  - & - && - end - timestamp - empty string True => end
-                # False => get position
+                char = [0, removed_staff_c[line[0]:line[1], line[2]:line[3]].shape[0], int(char[2])-2, int(char[3])+2]
+                # Classify Logic
                 symbols = ['#', '##', '&', '&&', '', '.']
                 open_divider = ["_1", "_2"]
                 time_stamp = ['4', '2']
@@ -146,8 +131,8 @@ def mainPipeLine(filename, img_original):
                     pass
                 else:
                     # get manual pos
-                    pos = getFlatHeadNotePos(fixed_staff_lines[line[0]: line[1], line[2]: line[3]], removed_staff_c[line[0]
-                                             : line[1], line[2]: line[3]][char[0]: char[1], char[2]: char[3]], staff_space_g, char, staff_height_g)
+                    pos = getFlatHeadNotePos(fixed_staff_lines[line[0]: line[1], line[2]: line[3]], removed_staff_c[line[0]: line[1],
+                                                                                                                    line[2]: line[3]][char[0]: char[1], char[2]: char[3]], staff_space_g, char, staff_height_g, img_o, isBeamOrChord)
                     if len(pos) == 1:
                         continue
                     # check if pos freater than 2 then check if beam or ched
@@ -172,47 +157,18 @@ def mainPipeLine(filename, img_original):
                         for k in range(1, len(pos)):
                             charsOut.append(pos[k]+"/16")
                         lineOut.append(charsOut)
-
-                    # print(pos)
-                    #print(check_chord_or_beam(charImg, staff_space))
-                # show_images([charImg])
-                # lineOut = sorted(lineOut, key=itemgetter(0))
-                # print(lineOut)
-                # getFlatHeadNotePos(fixed_staff_lines[line[0]: line[1], line[2]: line[3]], removed_staff[line[0]: line[1],
-                #                                                                                         line[2]: line[3]][char[0]: char[1], char[2]: char[3]], staff_space, char, staff_height)
             except Exception as e:
                 print(e)
                 pass
-            #######
-            # try:
-            #     # print(char)
-            #     # show_images(
-            #     #    [fixed_staff_lines[line[0]: line[1], line[2]: line[3]]])
-            #     char = [0, removed_staff[line[0]:line[1], line[2]
-            #         :line[3]].shape[0], int(char[2])-2, int(char[3])+2]
-            #     out = getFlatHeadNotePos(fixed_staff_lines[line[0]: line[1], line[2]: line[3]], removed_staff[line[0]: line[1],
-            #                                                                                                   line[2]: line[3]][char[0]: char[1], char[2]: char[3]], staff_space, char, staff_height)
-            #     lineOut.append(
-            #         out)
-            # except Exception as e:
-            #     print(e)
-            #     pass
+
         print("--------Line----------")
         lineOut = sorted(lineOut, key=itemgetter(0))
         print(lineOut)
-        # lineS = ""
-        # for arr in lineOut:
-        #     if arr[0] == -1:
-        #         continue
-        #     a = arr[1:]
-        #     a = np.sort(a)
-        #     if not len(a):
-        #         continue
-        #     lineS += "{ "
-        #     for x in a:
-        #         lineS += x+" "
-        #     lineS += "}"
-        # print(lineS)
+        print("--------fixed line -------------")
+        lineFixed = getLineFromArr(lineOut)
+        linesOut.append(lineFixed)
+
+    outfunction(linesOut, filename)
     return img
 
 
@@ -223,8 +179,16 @@ if __name__ == "__main__":
         os.mkdir(output_folder_path)
     except:
         pass
+    # load model
+    if os.path.isfile('finalized_model.sav'):
+        ##### the model already exit####
+        print("model already exit")
+    else:
+        ### not exit so train ###
+        run_experiment()
     for filename in os.listdir(input_folder_path):
-        print(filename)
         img = sk.io.imread(os.path.join(
             input_folder_path, filename), as_gray=True)
+        filename = get_filename_without_extension(filename)
+        print(filename)
         mainPipeLine(filename, img)
