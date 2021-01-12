@@ -14,10 +14,13 @@ def mainPipeLine(filename, img_original):
     img = np.copy(img_original)
     # deskew the image
     img = deskew(img)
-    # convert imagr to unsigned int 8 byte
+
+    # show_images([img])
+    # convert image to unsigned int 8 byte
     img = convertImgToUINT8(img)
     # convert image to binay
     img = binarize(img)
+    # show_images([img])
     # get copy of priginal image
     img_o = np.copy(img)
 
@@ -50,6 +53,7 @@ def mainPipeLine(filename, img_original):
                                 j*patch_width: (j+1)*patch_width] = removed_staff
             except:
                 pass
+    # show_images([removed_staff_c])
     #########################################
     # extract staff lines from image
     T_LEN = min(2*staff_height_g, staff_height_g+staff_space_g)
@@ -61,11 +65,14 @@ def mainPipeLine(filename, img_original):
     fixed_staff_lines = fixStaffLines(
         fixed_staff_lines, staff_height_g, staff_space_g, img_o)
     fixed_staff_lines = sk.morphology.binary_opening(fixed_staff_lines, se)
+
+    # show_images([fixed_staff_lines])
     # get staff lines from image
     lines = classicLineSegmentation(img, staff_space_g)
     i = 0
     linesOut = []
     for line in lines:
+        #show_images([removed_staff_c[line[0]:line[1], line[2]:line[3]]])
         lineOut = []
         # get notes bounds from the image without the staff lines
         bounds, only_char_arr = char_seg(
@@ -81,14 +88,17 @@ def mainPipeLine(filename, img_original):
             j += 1
             # check not garbage
             summation = np.sum(charImg)
-            if summation >= 0.90*charImg.shape[0]*charImg.shape[1] or charImg.shape[0]*charImg.shape[1] < staff_height_g*staff_height_g:
-                continue
 
-            #i += 1
+            #################
+            # if less than staff height then garbage
+            ##############
+            if charImg.shape[0]*charImg.shape[1] < staff_height_g*staff_height_g or summation == charImg.shape[0]*charImg.shape[1] or charImg.shape[1] < 2*staff_height_g:
+                continue
+            # show_images([charImg])
             try:
                 #######
                 # classify note
-                char = [0, removed_staff_c[line[0]:line[1], line[2]                                           :line[3]].shape[0], int(char[2])-2, int(char[3])+2]
+                char = [0, removed_staff_c[line[0]:line[1], line[2]:line[3]].shape[0], int(char[2])-2, int(char[3])+2]
                 # Classify Logic
                 symbols = ['#', '##', '&', '&&', '', '.']
                 open_divider = ["_1", "_2"]
@@ -97,6 +107,12 @@ def mainPipeLine(filename, img_original):
                 symbol = loaded_model.predict([extract_features(charImg)])[0]
                 # check if cord or beam
                 isBeamOrChord = check_chord_or_beam(charImg, staff_space_g)
+
+                print("checkCordOrBeam ", isBeamOrChord)
+                show_images([charImg])
+                ######################
+                # Grabage COLLECTOR
+                # ######################
                 # start == [
                 if symbol in time_stamp:
                     lineOut.append([char[2], symbol])
@@ -117,9 +133,11 @@ def mainPipeLine(filename, img_original):
                     # get manual pos
                     pos = getFlatHeadNotePos(fixed_staff_lines[line[0]: line[1], line[2]: line[3]], removed_staff_c[line[0]: line[1],
                                                                                                                     line[2]: line[3]][char[0]: char[1], char[2]: char[3]], staff_space_g, char, staff_height_g, img_o, isBeamOrChord)
+                    print("pos", pos)
+
                     if len(pos) == 1:
                         # misclassify consider it /2
-                        lineOut.append([pos[0], "a1/2"])
+                        # lineOut.append([pos[0], "a1/2"])
                         continue
                     # check if pos freater than 2 then check if beam or ched
                     if isBeamOrChord == -1:
