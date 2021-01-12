@@ -9,7 +9,7 @@ from heapq import *
 import cv2
 import joblib
 import os.path
-
+from operator import itemgetter
 '''
 get note head charachter basedon its position
 '''
@@ -19,7 +19,7 @@ def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, im
     if charPos[3]-charPos[2] < staff_space:
         return [-1]
     img = np.copy(note)
-    show_images([img])
+    # show_images([img])
     s_c = np.copy(staff_lines)
     n_c = np.copy(note)
     s_c = s_c > 0
@@ -37,30 +37,33 @@ def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, im
     # show_images([img])
     # img = sk.morphology.binary_closing(img)
     # img = sk.morphology.binary_dilation(img)
-    se = sk.morphology.disk(staff_space//2-1)
+    se = sk.morphology.disk(staff_space//2-2)
     # se[staff_space//4:3*staff_space//4+1,
     #     staff_space//4:3*staff_space//4+1] = 0
     img = sk.morphology.binary_opening(img, se)
-    show_images([img])
+    # show_images([img])
     # se = sk.morphology.disk((staff_space//3))
     se = sk.morphology.disk(staff_space//4)
     img = sk.morphology.binary_erosion(img)
-    img = sk.morphology.binary_dilation(img)
+    # show_images([img])
+    img = sk.morphology.binary_closing(img)
     se = sk.morphology.disk(staff_space//2-1)
     img = sk.morphology.binary_erosion(img, se)
     # img = sk.morphology.binary_erosion(img)
     se = sk.morphology.disk(staff_space//8+1)
     img = sk.morphology.binary_dilation(img, se)
     img = sk.morphology.binary_erosion(img)
-    show_images([img])
+
     bounding_boxes = sk.measure.find_contours(img, 0.8)
-    output = [charPos[2]]
+    output = []
+    #print("no of notes")
     # print(len(bounding_boxes))
+    # show_images([img])
     for box in bounding_boxes:
         [Xmin, Xmax, Ymin, Ymax] = [np.min(box[:, 1]), np.max(
             box[:, 1]), np.min(box[:, 0]), np.max(box[:, 0])]
         ar = (Xmax-Xmin)/(Ymax-Ymin)
-        if ar >= 0.5 and ar <= 1.5:
+        if True:
             r0 = int(Ymin)
             r1 = int(Ymax)
             r0 = max(r0, 0)
@@ -152,7 +155,8 @@ def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, im
                         output.append("a2")
                     else:
                         output.append("b2")
-
+    output = sorted(output)
+    output.insert(0, charPos[2])
     return output
 
 

@@ -86,12 +86,15 @@ def mainPipeLine(filename, img_original):
         os.mkdir("test_newOut/"+filename+"_img")
     except:
         pass
+    linesOut = []
     for line in lines:
         lineOut = []
         # get notes bounds from the image without the staff lines
         #show_images([removed_staff_c[line[0]:line[1], line[2]:line[3]]])
         bounds, only_char_arr = char_seg(
             removed_staff_c[line[0]:line[1], line[2]:line[3]])
+
+        #bounds = sorted(bounds,)
         i += 1
         try:
             os.mkdir("test_newOut/"+filename +
@@ -105,28 +108,76 @@ def mainPipeLine(filename, img_original):
                 continue
             charImg = only_char_arr[j]
             j += 1
+            # check not garbage
+            summation = np.sum(charImg)
+            if summation >= 0.98*charImg.shape[0]*charImg.shape[1]:
+                continue
             #i += 1
             try:
                 #######
                 # classify note
-                char = [0, removed_staff_c[line[0]:line[1], line[2]:line[3]].shape[0], int(char[2])-2, int(char[3])+2]
-                # print(char)
-                # if char[3]-char[2] < staff_space_g:
-                #     continue
-                # charImg = removed_staff_c[line[0]: line[1], line[2]                                          : line[3]][char[0]: char[1], char[2]: char[3]]
-                # show_images([charImg])
-                io.imsave("test_newOut/"+filename+"_img/"+filename+"_lines"+str(i)+"/"+filename+"_line_"+str(i) + "_char_"+str(
-                    j)+".png", sk.img_as_uint(
-                    charImg))
-                # charImg = np.array(charImg)
+                char = [0, removed_staff_c[line[0]:line[1], line[2]                                           :line[3]].shape[0], int(char[2])-2, int(char[3])+2]
                 # a,b,c,d ==> wrong classificion
                 # start - # - ##  - & - && - end - timestamp - empty string True => end
                 # False => get position
+                symbols = ['#', '##', '&', '&&', '', '.']
+                open_divider = ["_1", "_2"]
+                time_stamp = ['4', '2']
 
-                # symbol = loaded_model.predict([extract_features(charImg)])
-                # print(symbol)
-                #print(check_chord_or_beam(charImg, staff_space))
+                symbol = loaded_model.predict([extract_features(charImg)])[0]
+                # check if cord or beam
+                isBeamOrChord = check_chord_or_beam(charImg, staff_space_g)
+                print(symbol)
+                # start == [
+                if symbol in time_stamp:
+                    lineOut.append([char[2], symbol])
+                elif symbol == '[' and isBeamOrChord == -1:
+                    # check if image is rotated
+                    pass
+                elif symbol in symbols and isBeamOrChord == -1:
+                    # add to array of charachters
+                    if symbol == '':
+                        continue
+                    lineOut.append([char[2], symbol])
+                    pass
+                elif symbol in open_divider and isBeamOrChord == -1:
+                    # add a/1 or a/2
+                    lineOut.append([char[2], "a1"+symbol.replace("_", "/")])
+                    pass
+                else:
+                    # get manual pos
+                    pos = getFlatHeadNotePos(fixed_staff_lines[line[0]: line[1], line[2]: line[3]], removed_staff_c[line[0]
+                                             : line[1], line[2]: line[3]][char[0]: char[1], char[2]: char[3]], staff_space_g, char, staff_height_g)
+                    if len(pos) == 1:
+                        continue
+                    # check if pos freater than 2 then check if beam or ched
+                    if isBeamOrChord == -1:
+                        lineOut.append(
+                            [pos[0], pos[1]+symbol.replace("_", "/")])
+                    elif isBeamOrChord == 0:
+                        # then its a chord
+                        charsOut = [char[2]]
+                        for k in range(1, len(pos)):
+                            charsOut.append(pos[k]+"/4")
+                        lineOut.append(charsOut)
+                    elif isBeamOrChord == 1:
+                        # beam /16
+                        charsOut = [char[2]]
+                        for k in range(1, len(pos)):
+                            charsOut.append(pos[k]+"/8")
+                        lineOut.append(charsOut)
+                    else:
+                        # beam /16
+                        charsOut = [char[2]]
+                        for k in range(1, len(pos)):
+                            charsOut.append(pos[k]+"/16")
+                        lineOut.append(charsOut)
+
+                    # print(pos)
+                    #print(check_chord_or_beam(charImg, staff_space))
                 # show_images([charImg])
+                # lineOut = sorted(lineOut, key=itemgetter(0))
+                # print(lineOut)
                 # getFlatHeadNotePos(fixed_staff_lines[line[0]: line[1], line[2]: line[3]], removed_staff[line[0]: line[1],
                 #                                                                                         line[2]: line[3]][char[0]: char[1], char[2]: char[3]], staff_space, char, staff_height)
             except Exception as e:
@@ -146,8 +197,9 @@ def mainPipeLine(filename, img_original):
             # except Exception as e:
             #     print(e)
             #     pass
-        # print("--------Line----------")
-        # lineOut = sorted(lineOut, key=itemgetter(0))
+        print("--------Line----------")
+        lineOut = sorted(lineOut, key=itemgetter(0))
+        print(lineOut)
         # lineS = ""
         # for arr in lineOut:
         #     if arr[0] == -1:
