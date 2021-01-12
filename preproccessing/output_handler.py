@@ -42,7 +42,7 @@ def getLineFromArr(line):
                     for j in range(1, len(line[i])):
                         newLine.append([line[i][j]])
         i += 1
-    print(newLine)
+    # print(newLine)
     return newLine
 
 
@@ -58,22 +58,24 @@ def outfunction(array, output_file_name):
     if len(array) > 1:
         file1.write("{\n")
         flagend = 1
+
+    indx = 0
     for initarr in array:
         file1.write("[")
         for j in range(len(initarr)):
             if(len(initarr[j]) == 1):
                 if(initarr[j][0] == '4_4'):
-                    file1.write('\meter<"4/4">')
+                    file1.write(' \meter<"4/4">')
                     continue
                 elif(initarr[j][0] == '4_2' or initarr[j][0] == '2_4'):
-                    file1.write('\meter<"4/2">')
+                    file1.write(' \meter<"4/2">')
                     continue
                 else:
                     if j != 0:
                         file1.write(" ")
                     file1.write(initarr[j][0])
-                    if(j != len(initarr)-1):
-                        file1.write(" ")
+                    # if(j != len(initarr)-1):
+                    #     file1.write(" ")
 
             else:
                 file1.write("{")
@@ -82,7 +84,12 @@ def outfunction(array, output_file_name):
                     if(i != len(initarr[j])-1):
                         file1.write(",")
                 file1.write("} ")
-        file1.write("]\n")
+        #print("i "+str(indx)+" len arr "+str(len(array)))
+        if indx != len(array)-1 and len(array) > 1:
+            file1.write("],\n")
+        else:
+            file1.write("]\n")
+        indx += 1
     if(flagend):
         file1.write("}")
     file1.close()

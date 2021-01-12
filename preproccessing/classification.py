@@ -18,8 +18,8 @@ get note head charachter basedon its position
 
 
 def getFlatHeadNotePos(staff_lines, note, staff_space, charPos, staff_height, img_o, isBeamOrChord):
-    if charPos[3]-charPos[2] < staff_space:
-        return [-1]
+    # if charPos[3]-charPos[2] < staff_space:
+    #     return [-1]
     img = np.copy(note)
     # show_images([img])
     s_c = np.copy(staff_lines)

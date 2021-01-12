@@ -294,10 +294,12 @@ def char_seg(org_img):
 
     for i in range(bounds.shape[0]):
         if bounds[i][0] == 99999999:
+            only_char_arr.append([-1])
             continue
         cur = np.copy(labels[int(bounds[i][0]):int(
             bounds[i][1]+1), int(bounds[i][2]):int(bounds[i][3]+1)])
         cur = cur == i
+        # show_images([cur])
         only_char_arr.append(cur)
 
     return [bounds, only_char_arr]

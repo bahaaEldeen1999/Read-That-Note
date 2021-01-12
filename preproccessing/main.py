@@ -52,9 +52,9 @@ def mainPipeLine(filename, img_original):
                                 j*patch_width: (j+1)*patch_width] = removed_staff
             except:
                 pass
-    io.imsave("test_newOut/removed_staff"+filename+".png", sk.img_as_uint(
-        removed_staff_c))
-    print("done "+filename)
+    # io.imsave("test_newOut/removed_staff"+filename+".png", sk.img_as_uint(
+    #     removed_staff_c))
+    # print("done "+filename)
     #########################################
     # extract staff lines from image
     T_LEN = min(2*staff_height_g, staff_height_g+staff_space_g)
@@ -69,10 +69,10 @@ def mainPipeLine(filename, img_original):
     # get staff lines from image
     lines = classicLineSegmentation(img, staff_space_g)
     i = 0
-    try:
-        os.mkdir("test_newOut/"+filename+"_img")
-    except:
-        pass
+    # try:
+    #     os.mkdir("test_newOut/"+filename+"_img")
+    # except:
+    #     pass
     linesOut = []
     for line in lines:
         lineOut = []
@@ -83,28 +83,36 @@ def mainPipeLine(filename, img_original):
 
         #bounds = sorted(bounds,)
         i += 1
-        try:
-            os.mkdir("test_newOut/"+filename +
-                     "_img/"+filename+"_lines"+str(i))
-        except Exception as e:
-            pass
+        # try:
+        #     os.mkdir("test_newOut/"+filename +
+        #              "_img/"+filename+"_lines"+str(i))
+        # except Exception as e:
+        #     pass
         # print("here")
         j = 0
-        for char in bounds:
+        for x in range(bounds.shape[0]):
+            char = bounds[x]
             if char[0] == 99999999:
                 continue
-            charImg = only_char_arr[j]
+            charImg = only_char_arr[x]
             j += 1
             # check not garbage
             summation = np.sum(charImg)
-            if summation >= 0.98*charImg.shape[0]*charImg.shape[1]:
+            # print("summation ")
+            # print(summation)
+            # print(0.98*charImg.shape[0]*charImg.shape[1])
+            if summation >= 0.90*charImg.shape[0]*charImg.shape[1] or charImg.shape[0]*charImg.shape[1] < staff_height_g*staff_height_g:
+                # print("-----------")
+                # print("skipped")
+                # print("----------------")
+                # show_images([charImg])
                 continue
+
             #i += 1
             try:
                 #######
                 # classify note
-                char = [0, removed_staff_c[line[0]:line[1], line[2]
-                    :line[3]].shape[0], int(char[2])-2, int(char[3])+2]
+                char = [0, removed_staff_c[line[0]:line[1], line[2]                                           :line[3]].shape[0], int(char[2])-2, int(char[3])+2]
                 # Classify Logic
                 symbols = ['#', '##', '&', '&&', '', '.']
                 open_divider = ["_1", "_2"]
@@ -113,7 +121,10 @@ def mainPipeLine(filename, img_original):
                 symbol = loaded_model.predict([extract_features(charImg)])[0]
                 # check if cord or beam
                 isBeamOrChord = check_chord_or_beam(charImg, staff_space_g)
-                print(symbol)
+                # print("---------------------")
+                # print("symbol "+symbol)
+                # print("beamOrChord "+str(isBeamOrChord))
+                # show_images([charImg])
                 # start == [
                 if symbol in time_stamp:
                     lineOut.append([char[2], symbol])
@@ -134,7 +145,12 @@ def mainPipeLine(filename, img_original):
                     # get manual pos
                     pos = getFlatHeadNotePos(fixed_staff_lines[line[0]: line[1], line[2]: line[3]], removed_staff_c[line[0]: line[1],
                                                                                                                     line[2]: line[3]][char[0]: char[1], char[2]: char[3]], staff_space_g, char, staff_height_g, img_o, isBeamOrChord)
+                    # print("pos ")
+                    # print(pos)
+                    # show_images([charImg])
                     if len(pos) == 1:
+                        # misclassify consider it /2
+                        lineOut.append([pos[0], "a1/2"])
                         continue
                     # check if pos freater than 2 then check if beam or ched
                     if isBeamOrChord == -1:
@@ -158,14 +174,15 @@ def mainPipeLine(filename, img_original):
                         for k in range(1, len(pos)):
                             charsOut.append(pos[k]+"/16")
                         lineOut.append(charsOut)
+
             except Exception as e:
                 print(e)
                 pass
 
-        print("--------Line----------")
+        # print("--------Line----------")
         lineOut = sorted(lineOut, key=itemgetter(0))
-        print(lineOut)
-        print("--------fixed line -------------")
+        # print(lineOut)
+        # print("--------fixed line -------------")
         lineFixed = getLineFromArr(lineOut)
         linesOut.append(lineFixed)
 
