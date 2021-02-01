@@ -1,7 +1,8 @@
 # :musical_score: Read That Note
-
-<img src="./imgs/img.png"><br>
 <div align="center">
+<img src="./imgs/img.png"><br>
+  </div>
+<div  style="text-align:center">
   
   [![GitHub contributors](https://img.shields.io/github/contributors/bahaaEldeen1999/Read-That-Note)](https://github.com/bahaaEldeen1999/Read-That-Note/contributors)
   [![GitHub issues](https://img.shields.io/github/issues/bahaaEldeen1999/Read-That-Note)](https://github.com/bahaaEldeen1999/Read-That-Note/issues)
