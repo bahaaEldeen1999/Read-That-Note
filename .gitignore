@@ -1,0 +1,17 @@
+*.html
+*.c
+*.so
+__pycache__/
+.ipynb_checkpoints/
+build/
+PublicTestCases/
+easy/
+hard/
+hardOut/
+easyOut/
+test_new/
+output/
+outputE/
+outputH/
+test_newOut/
+PublicTestCases-version1.1/
