@@ -3,15 +3,15 @@
 <img src="./imgs/img.png"><br>
 <div align="center">
   
-  [![GitHub contributors](https://img.shields.io/github/contributors/bahaaEldeen1999/C-COM)](https://github.com/bahaaEldeen1999/C-COM/contributors)
-  [![GitHub issues](https://img.shields.io/github/issues/bahaaEldeen1999/C-COM)](https://github.com/bahaaEldeen1999/C-COM/issues)
-  [![GitHub forks](https://img.shields.io/github/forks/bahaaEldeen1999/C-COM)](https://github.com/bahaaEldeen1999/C-COM/network)
-  [![GitHub stars](https://img.shields.io/github/stars/bahaaEldeen1999/C-COM)](https://github.com/bahaaEldeen1999/C-COM/stargazers)
-  [![GitHub license](https://img.shields.io/github/license/bahaaEldeen1999/C-COM)](https://github.com/bahaaEldeen1999/C-COM/blob/master/LICENSE)
-  <img src="https://img.shields.io/github/languages/count/bahaaEldeen1999/C-COM" />
-  <img src="https://img.shields.io/github/languages/top/bahaaEldeen1999/C-COM" />
-  <img src="https://img.shields.io/github/languages/code-size/bahaaEldeen1999/C-COM" />
-  <img src="https://img.shields.io/github/issues-pr-raw/bahaaEldeen1999/C-COM" />
+  [![GitHub contributors](https://img.shields.io/github/contributors/bahaaEldeen1999/Read-That-Note)](https://github.com/bahaaEldeen1999/Read-That-Note/contributors)
+  [![GitHub issues](https://img.shields.io/github/issues/bahaaEldeen1999/Read-That-Note)](https://github.com/bahaaEldeen1999/Read-That-Note/issues)
+  [![GitHub forks](https://img.shields.io/github/forks/bahaaEldeen1999/Read-That-Note)](https://github.com/bahaaEldeen1999/Read-That-Note/network)
+  [![GitHub stars](https://img.shields.io/github/stars/bahaaEldeen1999/Read-That-Note)](https://github.com/bahaaEldeen1999/Read-That-Note/stargazers)
+  [![GitHub license](https://img.shields.io/github/license/bahaaEldeen1999/Read-That-Note)](https://github.com/bahaaEldeen1999/Read-That-Note/blob/master/LICENSE)
+  <img src="https://img.shields.io/github/languages/count/bahaaEldeen1999/Read-That-Note" />
+  <img src="https://img.shields.io/github/languages/top/bahaaEldeen1999/Read-That-Note" />
+  <img src="https://img.shields.io/github/languages/code-size/bahaaEldeen1999/Read-That-Note" />
+  <img src="https://img.shields.io/github/issues-pr-raw/bahaaEldeen1999/Read-That-Note" />
 
 </div>
 ### Read That Note is an optical musical recognition system, where the input is a musical sheet score, and the output is a text representing each note and symbol
@@ -31,7 +31,7 @@
 <li>Output To File</li>
 </ol>
 
-### for more details on the used algorithm please follow this link:
+### for more details on the used algorithm please follow this link: <a href="https://github.com/bahaaEldeen1999/Read-That-Note/tree/main/methodology">Methodology</a>
 
 ## Experiment
 
