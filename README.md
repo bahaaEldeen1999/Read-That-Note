@@ -32,7 +32,7 @@
 <li>Output To File</li>
 </ol>
 
-### for more details on the used algorithm please follow this link: <a href="https://github.com/bahaaEldeen1999/Read-That-Note/tree/main/methodology">Methodology</a>
+### for more details on the used algorithm please follow this link: <a href="https://github.com/bahaaEldeen1999/Read-That-Note/blob/main/methodology/readme.md">Methodology</a>
 
 ## Experiment
 
@@ -48,7 +48,7 @@
 
 <img src="./imgs/2.png">
 
-### sine segmentation
+### line segmentation
 
 <img src="./imgs/3.png">
 
